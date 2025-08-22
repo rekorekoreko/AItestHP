@@ -9,9 +9,12 @@ Run locally
 Environment variables (.env)
 - ADMIN_PASSWORD=admin password for login
 - JWT_SECRET=secret key for JWT
+- MONGODB_URI=MongoDB connection string
+- MONGODB_DB=database name
+- MONGODB_COLLECTION=collection name
 
 Notes
-- This PoC uses in-memory storage; data resets on restart.
+- Data is stored in MongoDB; configure connection via env variables above.
 - Media files are saved under media/uploads and thumbnails under media/thumbs.
 
 API

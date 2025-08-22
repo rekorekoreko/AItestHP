@@ -24,6 +24,10 @@ JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret")
 JWT_ALGO = "HS256"
 JWT_TTL_SECONDS = 3600
 
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_DB = os.getenv("MONGODB_DB", "aiart")
+MONGODB_COLLECTION = os.getenv("MONGODB_COLLECTION", "submissions")
+
 
 class AppSettings(BaseModel):
     media_root: Path = MEDIA_ROOT
@@ -41,6 +45,9 @@ class AppSettings(BaseModel):
     jwt_secret: str = JWT_SECRET
     jwt_algo: str = JWT_ALGO
     jwt_ttl_seconds: int = JWT_TTL_SECONDS
+    mongodb_uri: str = MONGODB_URI
+    mongodb_db: str = MONGODB_DB
+    mongodb_collection: str = MONGODB_COLLECTION
 
 
 settings = AppSettings()

@@ -98,13 +98,13 @@ async def create_submission(
         status=Status.pending,
         rejected_reason=None,
     )
-    store.create(sub)
+    await store.create(sub)
     return SubmissionCreateResponse(id=sub.id, status=sub.status)
 
 
 @app.get("/api/gallery", response_model=list[SubmissionPublic])
-def list_gallery(request: Request):
-    items = store.list(status=Status.approved)
+async def list_gallery(request: Request):
+    items = await store.list(status=Status.approved)
     res: list[SubmissionPublic] = []
     for s in items:
         thumb_url = _build_thumb_url(request, s.thumb_path or s.file_path)
@@ -124,8 +124,8 @@ def list_gallery(request: Request):
 
 
 @app.get("/api/items/{sid}", response_model=SubmissionDetail)
-def item_detail(sid: UUID, request: Request):
-    s = store.get(sid)
+async def item_detail(sid: UUID, request: Request):
+    s = await store.get(sid)
     if not s or s.status != Status.approved:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     thumb_url = _build_thumb_url(request, s.thumb_path or s.file_path)
@@ -145,21 +145,21 @@ def item_detail(sid: UUID, request: Request):
 
 
 @app.get("/api/admin/submissions", response_model=list[SubmissionAdmin])
-def admin_list_submissions(status: Optional[Status] = None, admin_ok: bool = Depends(require_admin)):
-    return store.list(status=status)
+async def admin_list_submissions(status: Optional[Status] = None, admin_ok: bool = Depends(require_admin)):
+    return await store.list(status=status)
 
 
 @app.post("/api/admin/submissions/{sid}/approve", response_model=SubmissionAdmin)
-def admin_approve_submission(sid: UUID, admin_ok: bool = Depends(require_admin)):
-    s = store.get(sid)
+async def admin_approve_submission(sid: UUID, admin_ok: bool = Depends(require_admin)):
+    s = await store.get(sid)
     if not s:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return store.update(sid, status=Status.approved, rejected_reason=None)
+    return await store.update(sid, status=Status.approved, rejected_reason=None)
 
 
 @app.post("/api/admin/submissions/{sid}/reject", response_model=SubmissionAdmin)
-def admin_reject_submission(sid: UUID, reason: str = Form(""), admin_ok: bool = Depends(require_admin)):
-    s = store.get(sid)
+async def admin_reject_submission(sid: UUID, reason: str = Form(""), admin_ok: bool = Depends(require_admin)):
+    s = await store.get(sid)
     if not s:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return store.update(sid, status=Status.rejected, rejected_reason=reason)
+    return await store.update(sid, status=Status.rejected, rejected_reason=reason)
