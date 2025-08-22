@@ -1,32 +1,49 @@
-from typing import Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
+
+from motor.motor_asyncio import AsyncIOMotorClient
+
 from .models import SubmissionAdmin, Status
+from .config import settings
 
 
-class InMemoryStore:
-    def __init__(self):
-        self._db: Dict[UUID, SubmissionAdmin] = {}
+class MongoStore:
+    def __init__(self, uri: str, db_name: str, collection_name: str):
+        self.client = AsyncIOMotorClient(uri)
+        self.collection = self.client[db_name][collection_name]
 
-    def create(self, sub: SubmissionAdmin):
-        self._db[sub.id] = sub
+    async def create(self, sub: SubmissionAdmin) -> SubmissionAdmin:
+        doc = sub.model_dump()
+        doc["_id"] = str(sub.id)
+        doc["id"] = str(sub.id)
+        await self.collection.insert_one(doc)
         return sub
 
-    def get(self, sid: UUID) -> Optional[SubmissionAdmin]:
-        return self._db.get(sid)
+    async def get(self, sid: UUID) -> Optional[SubmissionAdmin]:
+        doc = await self.collection.find_one({"id": str(sid)})
+        if doc:
+            doc.pop("_id", None)
+            return SubmissionAdmin(**doc)
+        return None
 
-    def list(self, status: Optional[Status] = None) -> List[SubmissionAdmin]:
-        items = list(self._db.values())
+    async def list(self, status: Optional[Status] = None) -> List[SubmissionAdmin]:
+        query: dict = {}
         if status is not None:
-            items = [x for x in items if x.status == status]
-        return sorted(items, key=lambda x: x.created_at, reverse=True)
+            query["status"] = status
+        cursor = self.collection.find(query).sort("created_at", -1)
+        items: List[SubmissionAdmin] = []
+        async for doc in cursor:
+            doc.pop("_id", None)
+            items.append(SubmissionAdmin(**doc))
+        return items
 
-    def update(self, sid: UUID, **kwargs) -> SubmissionAdmin:
-        s = self._db[sid]
-        for k, v in kwargs.items():
-            setattr(s, k, v)
-        self._db[sid] = s
-        return s
+    async def update(self, sid: UUID, **kwargs) -> SubmissionAdmin:
+        await self.collection.update_one({"id": str(sid)}, {"$set": kwargs})
+        doc = await self.collection.find_one({"id": str(sid)})
+        if not doc:
+            raise KeyError("Submission not found")
+        doc.pop("_id", None)
+        return SubmissionAdmin(**doc)
 
 
-store = InMemoryStore()
+store = MongoStore(settings.mongodb_uri, settings.mongodb_db, settings.mongodb_collection)
